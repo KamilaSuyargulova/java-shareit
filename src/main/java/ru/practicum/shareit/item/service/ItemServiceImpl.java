@@ -3,7 +3,7 @@ package ru.practicum.shareit.item.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.EntityNotFoundException;
-import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.*;
 import ru.practicum.shareit.item.mapper.ItemMapper;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.storage.ItemStorage;
@@ -21,66 +21,67 @@ public class ItemServiceImpl implements ItemService {
     private final UserService userService;
 
     @Override
-    public Collection<ItemDto> getUsersItemsDto(Long ownerId) {
+    public Collection<ItemResponseDto> getUsersItemsDto(Long ownerId) {
         userService.getUserDtoById(ownerId);
         return itemStorage.getUsersItems(ownerId)
                 .stream()
-                .map(ItemMapper::jpaToDto)
+                .map(ItemMapper::jpaToResponseDto)
                 .toList();
     }
 
     @Override
-    public ItemDto getItemDtoById(Long itemId) {
-        return ItemMapper.jpaToDto(itemStorage.getItemById(itemId)
+    public ItemResponseDto getItemDtoById(Long itemId) {
+        return ItemMapper.jpaToResponseDto(itemStorage.getItemById(itemId)
                 .orElseThrow(() -> new EntityNotFoundException("Предмет с таким id не найден")));
     }
 
     @Override
-    public Collection<ItemDto> getAvailableItemsDtoByText(String searchText) {
+    public Collection<ItemResponseDto> getAvailableItemsDtoByText(String searchText) {
         if (searchText.isBlank())
             return Collections.emptyList();
         return itemStorage.getAvailableItemByText(searchText)
                 .stream()
-                .map(ItemMapper::jpaToDto)
+                .map(ItemMapper::jpaToResponseDto)
                 .toList();
     }
 
     @Override
-    public ItemDto addItem(Long ownerId, ItemDto itemDto) {
-        Item newItem = ItemMapper.dtoToJpa(itemDto);
+    public ItemResponseDto addItem(Long ownerId, ItemRequestDto itemRequestDto) {
+        Item newItem = ItemMapper.requestDtoToJpa(itemRequestDto);
         userService.getUserDtoById(ownerId);
         newItem.setOwner(UserMapper.dtoToJpa(userService.getUserDtoById(ownerId)));
-        return ItemMapper.jpaToDto(itemStorage.addItem(newItem));
+        return ItemMapper.jpaToResponseDto(itemStorage.addItem(newItem));
     }
 
     @Override
-    public ItemDto updateItem(Long ownerId, Long itemId, ItemDto itemDto) {
+    public ItemResponseDto updateItem(Long ownerId, Long itemId, ItemRequestDto itemRequestDto) {
         Item itemToUpdate = getItemById(itemId);
         userService.getUserDtoById(ownerId);
         if (!itemToUpdate.getOwner().getId().equals(ownerId))
-            throw new EntityNotFoundException("Пользователь не является владельцем предмета");
-        if (Objects.nonNull(itemDto.getName())
-                && !itemDto.getName().isBlank()
-                && !itemToUpdate.getName().equals(itemDto.getName()))
-            itemToUpdate.setName(itemDto.getName());
-        if (Objects.nonNull(itemDto.getDescription())
+            throw new EntityNotFoundException("У пользователя нет прав для изменения этого предмета");
+
+        if (Objects.nonNull(itemRequestDto.getName())
+                && !itemRequestDto.getName().isBlank()
+                && !itemToUpdate.getName().equals(itemRequestDto.getName()))
+            itemToUpdate.setName(itemRequestDto.getName());
+        if (Objects.nonNull(itemRequestDto.getDescription())
                 && !itemToUpdate.getDescription().isBlank()
-                && !itemToUpdate.getDescription().equals(itemDto.getDescription()))
-            itemToUpdate.setDescription(itemDto.getDescription());
-        if (Objects.nonNull(itemDto.getAvailable())
-                && !itemToUpdate.getAvailable().equals(itemDto.getAvailable()))
-            itemToUpdate.setAvailable(itemDto.getAvailable());
-        return ItemMapper.jpaToDto(itemToUpdate);
+                && !itemToUpdate.getDescription().equals(itemRequestDto.getDescription()))
+            itemToUpdate.setDescription(itemRequestDto.getDescription());
+        if (Objects.nonNull(itemRequestDto.getAvailable())
+                && !itemToUpdate.getAvailable().equals(itemRequestDto.getAvailable()))
+            itemToUpdate.setAvailable(itemRequestDto.getAvailable());
+        return ItemMapper.jpaToResponseDto(itemToUpdate);
     }
 
     @Override
-    public ItemDto deleteItemById(Long ownerId, Long itemId) {
+    public ItemResponseDto deleteItemById(Long ownerId, Long itemId) {
         Item itemToDelete = getItemById(itemId);
         userService.getUserDtoById(ownerId);
         if (!itemToDelete.getOwner().getId().equals(ownerId))
-            throw new EntityNotFoundException("Пользователь не является владельцем предмета");
+            throw new EntityNotFoundException("У пользователя нет прав для удаления этого предмета");
 
-        return ItemMapper.jpaToDto(itemStorage.deleteItem(itemId));
+        return ItemMapper.jpaToResponseDto(itemStorage.deleteItem(itemId));
     }
 
     private Item getItemById(Long id) {

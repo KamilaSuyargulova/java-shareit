@@ -8,8 +8,7 @@ import ru.practicum.shareit.request.model.ItemRequest;
 
 @Data
 @Builder
-public class ItemDto {
-    private Long id;
+public class ItemRequestDto {
     @NotBlank
     private String name;
     @NotBlank

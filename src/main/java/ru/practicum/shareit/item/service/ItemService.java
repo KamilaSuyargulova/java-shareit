@@ -1,21 +1,21 @@
 package ru.practicum.shareit.item.service;
 
 import jakarta.validation.constraints.Positive;
-import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.*;
 
 import java.util.Collection;
 
 public interface ItemService {
 
-    Collection<ItemDto> getUsersItemsDto(Long ownerId);
+    Collection<ItemResponseDto> getUsersItemsDto(Long ownerId);
 
-    ItemDto getItemDtoById(Long id);
+    ItemResponseDto getItemDtoById(Long id);
 
-    Collection<ItemDto> getAvailableItemsDtoByText(@Positive String searchText);
+    Collection<ItemResponseDto> getAvailableItemsDtoByText(@Positive String searchText);
 
-    ItemDto addItem(Long ownerId, ItemDto itemDto);
+    ItemResponseDto addItem(Long ownerId, ItemRequestDto itemRequestDto);
 
-    ItemDto updateItem(Long ownerId, Long itemId, ItemDto itemDto);
+    ItemResponseDto updateItem(Long ownerId, Long itemId, ItemRequestDto itemRequestDto);
 
-    ItemDto deleteItemById(Long ownerId, Long itemId);
+    ItemResponseDto deleteItemById(Long ownerId, Long itemId);
 }
