@@ -1,17 +1,19 @@
-package ru.practicum.shareit.item.model;
+package ru.practicum.shareit.item.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
 import ru.practicum.shareit.request.model.ItemRequest;
-import ru.practicum.shareit.user.model.User;
 
 @Data
 @Builder
-public class Item {
-    private Long id;
+public class ItemRequestDto {
+    @NotBlank
     private String name;
+    @NotBlank
     private String description;
+    @NotNull
     private Boolean available;
-    private User owner;
     private ItemRequest request;
 }
