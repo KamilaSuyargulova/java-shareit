@@ -6,10 +6,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.comment.dto.CommentRequestDto;
+import ru.practicum.shareit.comment.dto.CommentResponseDto;
 import ru.practicum.shareit.item.dto.*;
 import ru.practicum.shareit.item.service.ItemService;
 
 import java.util.Collection;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -19,15 +22,16 @@ public class ItemController {
     private final ItemService itemService;
 
     @GetMapping
-    public Collection<ItemResponseDto> getUsersItems(@RequestHeader("X-Sharer-User-Id") Long ownerId) {
-        log.info("Получить все предметы");
-        return itemService.getUsersItemsDto(ownerId);
+    public List<ItemBookingDto> getUsersItems(@RequestHeader("X-Sharer-User-Id") Long ownerId) {
+        log.info("Получить все предметы пользователя id = {} с датами бронирований", ownerId);
+        return itemService.getUsersItemsWithBookings(ownerId);
     }
 
     @GetMapping("/{itemId}")
-    public ItemResponseDto getItemById(@Positive @PathVariable(value = "itemId") Long id) {
-        log.info("Получить предмет по id = {}", id);
-        return itemService.getItemDtoById(id);
+    public ItemBookingDto getItemById(@RequestHeader("X-Sharer-User-Id") Long userId,
+                                      @Positive @PathVariable(value = "itemId") Long itemId) {
+        log.info("Получить предмет по id = {} для пользователя id = {}", itemId, userId);
+        return itemService.getItemWithBookingsAndComments(itemId, userId);
     }
 
     @GetMapping("/search")
@@ -40,7 +44,7 @@ public class ItemController {
     @ResponseStatus(HttpStatus.CREATED)
     public ItemResponseDto addNewItem(@RequestHeader("X-Sharer-User-Id") Long ownerId,
                                       @Valid @RequestBody ItemRequestDto itemRequestDto) {
-        log.info("Добавить новый предмет");
+        log.info("Добавить новый предмет для пользователя id = {}", ownerId);
         return itemService.addItem(ownerId, itemRequestDto);
     }
 
@@ -48,14 +52,23 @@ public class ItemController {
     public ItemResponseDto updateItem(@RequestHeader("X-Sharer-User-Id") Long ownerId,
                                       @Positive @PathVariable(value = "itemId") Long itemId,
                                       @RequestBody ItemRequestDto itemRequestDto) {
-        log.info("Обновить предмет с id = {}", itemId);
+        log.info("Обновить предмет с id = {} для пользователя id = {}", itemId, ownerId);
         return itemService.updateItem(ownerId, itemId, itemRequestDto);
     }
 
     @DeleteMapping("/{itemId}")
     public ItemResponseDto deleteItemById(@RequestHeader("X-Sharer-User-Id") Long ownerId,
                                           @Positive @PathVariable(value = "itemId") Long itemId) {
-        log.info("Удалить предмет с id = {}", itemId);
+        log.info("Удалить предмет с id = {} для пользователя id = {}", itemId, ownerId);
         return itemService.deleteItemById(ownerId, itemId);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommentResponseDto addComment(@RequestHeader("X-Sharer-User-Id") Long userId,
+                                         @Positive @PathVariable Long itemId,
+                                         @Valid @RequestBody CommentRequestDto commentRequestDto) {
+        log.info("Добавить комментарий к предмету id = {} от пользователя id = {}", itemId, userId);
+        return itemService.addComment(userId, itemId, commentRequestDto);
     }
 }

@@ -2,61 +2,74 @@ package ru.practicum.shareit.user.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.exception.EntityNotFoundException;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.mapper.UserMapper;
 import ru.practicum.shareit.user.model.User;
-import ru.practicum.shareit.user.storage.UserStorage;
+import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.util.Collection;
 import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
-    private final UserStorage userStorage;
+    private final UserRepository userRepository;
 
     @Override
     public Collection<UserDto> getAllUsersDto() {
-        return userStorage.getAllUsers()
+        return userRepository.findAll()
                 .stream()
-                .map(UserMapper::jpaToDto)
+                .map(UserMapper::toUserDto)
                 .toList();
     }
 
     @Override
     public UserDto getUserDtoById(Long userId) {
-        return UserMapper.jpaToDto(getUserById(userId));
+        return UserMapper.toUserDto(getUserById(userId));
     }
 
     @Override
+    @Transactional
     public UserDto addNewUser(UserDto userDto) {
-        userStorage.checkEmailExists(UserMapper.dtoToJpa(userDto));
-        return UserMapper.jpaToDto(userStorage.addUser(UserMapper.dtoToJpa(userDto)));
+        if (userRepository.existsByEmail(userDto.getEmail())) {
+            throw new RuntimeException("Пользователь с таким email уже существует");
+        }
+        User user = UserMapper.toUser(userDto);
+        return UserMapper.toUserDto(userRepository.save(user));
     }
 
     @Override
+    @Transactional
     public UserDto updateUser(Long id, UserDto userDto) {
-        userStorage.checkEmailExists(UserMapper.dtoToJpa(userDto));
-        User userToUpd = getUserById(id);
-        if (Objects.nonNull(userDto.getName())
-                && !userDto.getName().isBlank()
-                && !userToUpd.getName().equals(userDto.getName()))
-            userToUpd.setName(userDto.getName());
-        if (Objects.nonNull(userDto.getEmail())
-                && !userDto.getEmail().isBlank()
-                && !userToUpd.getEmail().equals(userDto.getEmail()))
-            userToUpd.setEmail(userDto.getEmail());
-        return UserMapper.jpaToDto(userToUpd);
+        User userToUpdate = getUserById(id);
+
+        if (userDto.getEmail() != null && !userDto.getEmail().equals(userToUpdate.getEmail())) {
+            if (userRepository.existsByEmail(userDto.getEmail())) {
+                throw new RuntimeException("Пользователь с таким email уже существует");
+            }
+            userToUpdate.setEmail(userDto.getEmail());
+        }
+
+        if (Objects.nonNull(userDto.getName()) && !userDto.getName().isBlank()) {
+            userToUpdate.setName(userDto.getName());
+        }
+
+        return UserMapper.toUserDto(userToUpdate);
     }
 
     @Override
+    @Transactional
     public UserDto deleteUserById(Long id) {
-        return UserMapper.jpaToDto(userStorage.deleteUserById(id));
+        User user = getUserById(id);
+        userRepository.deleteById(id);
+        return UserMapper.toUserDto(user);
     }
 
     private User getUserById(Long userId) {
-        return userStorage.getUserById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден"));
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Пользователь с id " + userId + " не найден"));
     }
 }
