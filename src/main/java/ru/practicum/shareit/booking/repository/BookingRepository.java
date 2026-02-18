@@ -15,28 +15,24 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByBookerId(Long bookerId, Sort sort);
 
-    @Query("select b from Booking b join b.item i where i.owner.id = ?1")
     List<Booking> findByItemOwnerId(Long ownerId, Sort sort);
 
     List<Booking> findByBookerIdAndStatus(Long bookerId, BookingStatus status, Sort sort);
 
-    @Query("select b from Booking b join b.item i where i.owner.id = ?1 and b.status = ?2")
     List<Booking> findByItemOwnerIdAndStatus(Long ownerId, BookingStatus status, Sort sort);
 
-    @Query("select b from Booking b join b.item i where b.booker.id = ?1 and b.start <= ?2 and b.end > ?2")
-    List<Booking> findCurrentByBookerId(Long bookerId, LocalDateTime now, Sort sort);
+    List<Booking> findByBookerIdAndStartLessThanEqualAndEndGreaterThan(Long bookerId, LocalDateTime now1,
+                                                                       LocalDateTime now2, Sort sort);
 
-    @Query("select b from Booking b join b.item i where i.owner.id = ?1 and b.start <= ?2 and b.end > ?2")
-    List<Booking> findCurrentByItemOwnerId(Long ownerId, LocalDateTime now, Sort sort);
+    List<Booking> findByItemOwnerIdAndStartLessThanEqualAndEndGreaterThan(Long ownerId, LocalDateTime now1,
+                                                                          LocalDateTime now2, Sort sort);
 
     List<Booking> findByBookerIdAndEndBefore(Long bookerId, LocalDateTime end, Sort sort);
 
-    @Query("select b from Booking b join b.item i where i.owner.id = ?1 and b.end < ?2")
     List<Booking> findByItemOwnerIdAndEndBefore(Long ownerId, LocalDateTime end, Sort sort);
 
     List<Booking> findByBookerIdAndStartAfter(Long bookerId, LocalDateTime start, Sort sort);
 
-    @Query("select b from Booking b join b.item i where i.owner.id = ?1 and b.start > ?2")
     List<Booking> findByItemOwnerIdAndStartAfter(Long ownerId, LocalDateTime start, Sort sort);
 
     @Query("select case when count(b) > 0 then true else false end from Booking b " +

@@ -75,6 +75,10 @@ public class BookingServiceImpl implements BookingService {
             throw new ValidationException("Бронирование уже обработано");
         }
 
+        if (approved == null) {
+            throw new ValidationException("Параметр approved не может быть null");
+        }
+
         booking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
 
         return BookingMapper.toBookingDtoOutput(booking);
@@ -103,7 +107,8 @@ public class BookingServiceImpl implements BookingService {
                 bookings = bookingRepository.findByBookerId(userId, SORT_BY_START_DESC);
                 break;
             case CURRENT:
-                bookings = bookingRepository.findCurrentByBookerId(userId, now, SORT_BY_START_DESC);
+                bookings = bookingRepository.findByBookerIdAndStartLessThanEqualAndEndGreaterThan(userId,
+                        now, now, SORT_BY_START_DESC);
                 break;
             case PAST:
                 bookings = bookingRepository.findByBookerIdAndEndBefore(userId, now, SORT_BY_START_DESC);
@@ -137,7 +142,8 @@ public class BookingServiceImpl implements BookingService {
                 bookings = bookingRepository.findByItemOwnerId(ownerId, SORT_BY_START_DESC);
                 break;
             case CURRENT:
-                bookings = bookingRepository.findCurrentByItemOwnerId(ownerId, now, SORT_BY_START_DESC);
+                bookings = bookingRepository.findByItemOwnerIdAndStartLessThanEqualAndEndGreaterThan(
+                        ownerId, now, now, SORT_BY_START_DESC);
                 break;
             case PAST:
                 bookings = bookingRepository.findByItemOwnerIdAndEndBefore(ownerId, now, SORT_BY_START_DESC);

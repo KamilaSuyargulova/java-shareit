@@ -25,11 +25,7 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -60,10 +56,13 @@ public class ItemServiceImpl implements ItemService {
 
         LocalDateTime now = LocalDateTime.now();
 
+        Map<Long, BookingDto> lastBookingsMap = getLastBookingsForItems(itemIds, now);
+        Map<Long, BookingDto> nextBookingsMap = getNextBookingsForItems(itemIds, now);
+
         return items.stream()
                 .map(item -> {
-                    BookingDto lastBooking = getLastBooking(item.getId(), now);
-                    BookingDto nextBooking = getNextBooking(item.getId(), now);
+                    BookingDto lastBooking = lastBookingsMap.get(item.getId());
+                    BookingDto nextBooking = nextBookingsMap.get(item.getId());
                     List<Comment> comments = commentsByItemId.getOrDefault(item.getId(), Collections.emptyList());
 
                     return ItemMapper.toItemBookingDto(item, lastBooking, nextBooking, comments);
@@ -162,6 +161,28 @@ public class ItemServiceImpl implements ItemService {
 
         Comment comment = CommentMapper.toComment(commentRequestDto, item, author);
         return CommentMapper.toCommentResponseDto(commentRepository.save(comment));
+    }
+
+    private Map<Long, BookingDto> getLastBookingsForItems(List<Long> itemIds, LocalDateTime now) {
+        Map<Long, BookingDto> result = new HashMap<>();
+        for (Long itemId : itemIds) {
+            BookingDto lastBooking = getLastBooking(itemId, now);
+            if (lastBooking != null) {
+                result.put(itemId, lastBooking);
+            }
+        }
+        return result;
+    }
+
+    private Map<Long, BookingDto> getNextBookingsForItems(List<Long> itemIds, LocalDateTime now) {
+        Map<Long, BookingDto> result = new HashMap<>();
+        for (Long itemId : itemIds) {
+            BookingDto nextBooking = getNextBooking(itemId, now);
+            if (nextBooking != null) {
+                result.put(itemId, nextBooking);
+            }
+        }
+        return result;
     }
 
     private BookingDto getLastBooking(Long itemId, LocalDateTime now) {
