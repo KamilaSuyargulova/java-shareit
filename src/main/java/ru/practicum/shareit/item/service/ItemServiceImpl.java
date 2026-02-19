@@ -148,7 +148,6 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     public CommentResponseDto addComment(Long userId, Long itemId, CommentRequestDto commentRequestDto) {
         User author = getUserById(userId);
-
         Item item = getItemById(itemId);
 
         LocalDateTime now = LocalDateTime.now();
@@ -164,25 +163,31 @@ public class ItemServiceImpl implements ItemService {
     }
 
     private Map<Long, BookingDto> getLastBookingsForItems(List<Long> itemIds, LocalDateTime now) {
-        Map<Long, BookingDto> result = new HashMap<>();
-        for (Long itemId : itemIds) {
-            BookingDto lastBooking = getLastBooking(itemId, now);
-            if (lastBooking != null) {
-                result.put(itemId, lastBooking);
-            }
+        if (itemIds.isEmpty()) {
+            return Collections.emptyMap();
         }
-        return result;
+
+        List<Booking> lastBookings = bookingRepository.findLastBookingsForItems(itemIds, now);
+
+        return lastBookings.stream()
+                .collect(Collectors.toMap(
+                        booking -> booking.getItem().getId(),
+                        BookingMapper::toBookingDto
+                ));
     }
 
     private Map<Long, BookingDto> getNextBookingsForItems(List<Long> itemIds, LocalDateTime now) {
-        Map<Long, BookingDto> result = new HashMap<>();
-        for (Long itemId : itemIds) {
-            BookingDto nextBooking = getNextBooking(itemId, now);
-            if (nextBooking != null) {
-                result.put(itemId, nextBooking);
-            }
+        if (itemIds.isEmpty()) {
+            return Collections.emptyMap();
         }
-        return result;
+
+        List<Booking> nextBookings = bookingRepository.findNextBookingsForItems(itemIds, now);
+
+        return nextBookings.stream()
+                .collect(Collectors.toMap(
+                        booking -> booking.getItem().getId(),
+                        BookingMapper::toBookingDto
+                ));
     }
 
     private BookingDto getLastBooking(Long itemId, LocalDateTime now) {
