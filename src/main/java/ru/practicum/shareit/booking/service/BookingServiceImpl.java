@@ -75,10 +75,6 @@ public class BookingServiceImpl implements BookingService {
             throw new ValidationException("Бронирование уже обработано");
         }
 
-        if (approved == null) {
-            throw new ValidationException("Параметр approved не может быть null");
-        }
-
         booking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
 
         return BookingMapper.toBookingDtoOutput(booking);
