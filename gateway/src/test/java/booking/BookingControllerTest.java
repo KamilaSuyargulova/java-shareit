@@ -16,9 +16,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import ru.practicum.shareit.ShareItGateway;
-import ru.practicum.shareit.booking.BookingClient;
-import ru.practicum.shareit.booking.dto.BookingCreateDto;
-import ru.practicum.shareit.booking.dto.BookingState;
+import ru.practicum.shareit.BookingClient;
+import ru.practicum.shareit.dto.BookingCreateDto;
+import ru.practicum.shareit.dto.BookingState;
 
 import java.time.LocalDateTime;
 import java.util.List;
