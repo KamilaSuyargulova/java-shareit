@@ -11,12 +11,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import ru.practicum.shareit.controller.BookingController;
-import ru.practicum.shareit.dto.BookingCreateDto;
-import ru.practicum.shareit.dto.BookingResponseDto;
-import ru.practicum.shareit.model.BookingState;
-import ru.practicum.shareit.model.BookingStatus;
-import ru.practicum.shareit.service.BookingServiceImpl;
+import ru.practicum.shareit.booking.controller.BookingController;
+import ru.practicum.shareit.booking.dto.BookingCreateDto;
+import ru.practicum.shareit.booking.dto.BookingResponseDto;
+import ru.practicum.shareit.booking.model.BookingState;
+import ru.practicum.shareit.booking.model.BookingStatus;
+import ru.practicum.shareit.booking.service.BookingServiceImpl;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.model.User;
 
