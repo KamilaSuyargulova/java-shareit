@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
-import ru.practicum.shareit.common.BaseClient;
 
 import java.util.Map;
 

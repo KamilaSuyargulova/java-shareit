@@ -1,7 +1,6 @@
 package ru.practicum.shareit.common;
 
 import org.junit.jupiter.api.Test;
-import ru.practicum.shareit.common.Constants;
 
 import static org.junit.jupiter.api.Assertions.*;
 
