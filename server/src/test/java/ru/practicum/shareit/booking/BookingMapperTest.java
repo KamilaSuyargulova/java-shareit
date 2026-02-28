@@ -12,12 +12,9 @@ import ru.practicum.shareit.user.model.User;
 
 import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 class BookingMapperTest {
-
-    private final BookingMapper mapper = new BookingMapper();
 
     @Test
     void mapToBooking_ShouldMapAllFields() {
@@ -30,7 +27,7 @@ class BookingMapperTest {
                 .end(end)
                 .build();
 
-        Booking result = mapper.mapToBooking(createDto);
+        Booking result = BookingMapper.mapToBooking(createDto);
 
         assertNotNull(result);
         assertEquals(start, result.getStartBooking());
@@ -53,7 +50,7 @@ class BookingMapperTest {
                 .item(item)
                 .build();
 
-        BookingResponseDto result = mapper.mapToResponseDto(booking);
+        BookingResponseDto result = BookingMapper.mapToResponseDto(booking);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
@@ -72,7 +69,7 @@ class BookingMapperTest {
                 .booker(booker)
                 .build();
 
-        BookingShortResponseDto result = mapper.mapToShortDto(booking);
+        BookingShortResponseDto result = BookingMapper.mapToShortDto(booking);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());

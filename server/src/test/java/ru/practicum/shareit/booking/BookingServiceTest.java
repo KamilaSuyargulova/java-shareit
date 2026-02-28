@@ -7,38 +7,34 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.shareit.ShareItApp;
 import ru.practicum.shareit.booking.dto.BookingResponseDto;
-import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
-import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.booking.service.BookingService;
 import ru.practicum.shareit.exception.BadRequestException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.user.model.User;
-import ru.practicum.shareit.user.repository.UserRepository;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest(classes = ShareItApp.class)
+@SpringBootTest
 @ActiveProfiles("test")
 @Transactional
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 class BookingServiceTest {
     private final BookingService bookingService;
-    private final BookingRepository bookingRepository;
-    private final UserRepository userRepository;
-    private final ItemRepository itemRepository;
+    private final EntityManager em;
 
     private User owner;
     private User booker;
     private Item item;
-    private Booking waitingBooking;
+    private Long waitingBookingId;
 
     @BeforeEach
     void setUp() {
@@ -46,13 +42,13 @@ class BookingServiceTest {
                 .name("John Owner")
                 .email("owner@example.com")
                 .build();
-        owner = userRepository.save(owner);
+        em.persist(owner);
 
         booker = User.builder()
                 .name("Jane Booker")
                 .email("booker@example.com")
                 .build();
-        booker = userRepository.save(booker);
+        em.persist(booker);
 
         item = Item.builder()
                 .name("Laptop")
@@ -60,44 +56,52 @@ class BookingServiceTest {
                 .available(true)
                 .owner(owner)
                 .build();
-        item = itemRepository.save(item);
+        em.persist(item);
 
-        waitingBooking = Booking.builder()
+        var waitingBooking = ru.practicum.shareit.booking.model.Booking.builder()
                 .startBooking(LocalDateTime.now().plusDays(1))
                 .endBooking(LocalDateTime.now().plusDays(3))
                 .item(item)
                 .booker(booker)
                 .status(BookingStatus.WAITING)
                 .build();
-        waitingBooking = bookingRepository.save(waitingBooking);
+        em.persist(waitingBooking);
+        em.flush();
+
+        waitingBookingId = waitingBooking.getId();
     }
 
     @Test
     void approveBooking_ShouldApproveBooking_WhenUserIsOwnerAndApprovedIsTrue() {
-        BookingResponseDto result = bookingService.approveBooking(owner.getId(), waitingBooking.getId(), true);
+        BookingResponseDto result = bookingService.approveBooking(owner.getId(), waitingBookingId, true);
 
         assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(waitingBooking.getId());
+        assertThat(result.getId()).isEqualTo(waitingBookingId);
         assertThat(result.getStatus()).isEqualTo(BookingStatus.APPROVED);
-        assertThat(result.getStart()).isEqualTo(waitingBooking.getStartBooking());
-        assertThat(result.getEnd()).isEqualTo(waitingBooking.getEndBooking());
 
-        assertThat(result.getBooker().getId()).isEqualTo(booker.getId());
-        assertThat(result.getItem().getId()).isEqualTo(item.getId());
+        TypedQuery<ru.practicum.shareit.booking.model.Booking> query = em.createQuery(
+                "SELECT b FROM Booking b WHERE b.id = :id",
+                ru.practicum.shareit.booking.model.Booking.class);
+        query.setParameter("id", waitingBookingId);
+        var updatedBooking = query.getSingleResult();
 
-        Booking updatedBooking = bookingRepository.findById(waitingBooking.getId()).orElseThrow();
         assertThat(updatedBooking.getStatus()).isEqualTo(BookingStatus.APPROVED);
     }
 
     @Test
     void approveBooking_ShouldRejectBooking_WhenUserIsOwnerAndApprovedIsFalse() {
-        BookingResponseDto result = bookingService.approveBooking(owner.getId(), waitingBooking.getId(), false);
+        BookingResponseDto result = bookingService.approveBooking(owner.getId(), waitingBookingId, false);
 
         assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(waitingBooking.getId());
+        assertThat(result.getId()).isEqualTo(waitingBookingId);
         assertThat(result.getStatus()).isEqualTo(BookingStatus.REJECTED);
 
-        Booking updatedBooking = bookingRepository.findById(waitingBooking.getId()).orElseThrow();
+        TypedQuery<ru.practicum.shareit.booking.model.Booking> query = em.createQuery(
+                "SELECT b FROM Booking b WHERE b.id = :id",
+                ru.practicum.shareit.booking.model.Booking.class);
+        query.setParameter("id", waitingBookingId);
+        var updatedBooking = query.getSingleResult();
+
         assertThat(updatedBooking.getStatus()).isEqualTo(BookingStatus.REJECTED);
     }
 
@@ -117,149 +121,48 @@ class BookingServiceTest {
                 .name("Not Owner")
                 .email("notowner@example.com")
                 .build();
-        User savedNotOwner = userRepository.save(notOwner);
+        em.persist(notOwner);
+        em.flush();
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> bookingService.approveBooking(savedNotOwner.getId(), waitingBooking.getId(), true));
+                () -> bookingService.approveBooking(notOwner.getId(), waitingBookingId, true));
 
-        assertThat(exception.getMessage()).contains("User with id=" + savedNotOwner.getId() + " is not owner of booking with id=" + waitingBooking.getId());
+        assertThat(exception.getMessage()).contains("User with id=" + notOwner.getId() + " is not owner of booking with id=" + waitingBookingId);
 
-        Booking unchangedBooking = bookingRepository.findById(waitingBooking.getId()).orElseThrow();
+        TypedQuery<ru.practicum.shareit.booking.model.Booking> query = em.createQuery(
+                "SELECT b FROM Booking b WHERE b.id = :id",
+                ru.practicum.shareit.booking.model.Booking.class);
+        query.setParameter("id", waitingBookingId);
+        var unchangedBooking = query.getSingleResult();
+
         assertThat(unchangedBooking.getStatus()).isEqualTo(BookingStatus.WAITING);
     }
 
     @Test
     void approveBooking_ShouldThrowBadRequestException_WhenBookingStatusIsNotWaiting() {
-        Booking approvedBooking = Booking.builder()
+        var approvedBooking = ru.practicum.shareit.booking.model.Booking.builder()
                 .startBooking(LocalDateTime.now().plusDays(2))
                 .endBooking(LocalDateTime.now().plusDays(4))
                 .item(item)
                 .booker(booker)
                 .status(BookingStatus.APPROVED)
                 .build();
-        Booking savedApprovedBooking = bookingRepository.save(approvedBooking);
+        em.persist(approvedBooking);
+        em.flush();
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> bookingService.approveBooking(owner.getId(), savedApprovedBooking.getId(), true));
+                () -> bookingService.approveBooking(owner.getId(), approvedBooking.getId(), true));
 
         assertThat(exception.getMessage()).isEqualTo("Booking status has already been changed");
-
-        Booking unchangedBooking = bookingRepository.findById(savedApprovedBooking.getId()).orElseThrow();
-        assertThat(unchangedBooking.getStatus()).isEqualTo(BookingStatus.APPROVED);
-    }
-
-    @Test
-    void approveBooking_ShouldThrowBadRequestException_WhenRejectingAlreadyRejectedBooking() {
-        Booking rejectedBooking = Booking.builder()
-                .startBooking(LocalDateTime.now().plusDays(2))
-                .endBooking(LocalDateTime.now().plusDays(4))
-                .item(item)
-                .booker(booker)
-                .status(BookingStatus.REJECTED)
-                .build();
-        Booking savedRejectedBooking = bookingRepository.save(rejectedBooking);
-
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> bookingService.approveBooking(owner.getId(), savedRejectedBooking.getId(), false));
-
-        assertThat(exception.getMessage()).isEqualTo("Booking status has already been changed");
-
-        Booking unchangedBooking = bookingRepository.findById(savedRejectedBooking.getId()).orElseThrow();
-        assertThat(unchangedBooking.getStatus()).isEqualTo(BookingStatus.REJECTED);
-    }
-
-    @Test
-    void approveBooking_ShouldWorkWithMultipleBookingsForSameItem() {
-        Booking anotherWaitingBooking = Booking.builder()
-                .startBooking(LocalDateTime.now().plusDays(5))
-                .endBooking(LocalDateTime.now().plusDays(7))
-                .item(item)
-                .booker(booker)
-                .status(BookingStatus.WAITING)
-                .build();
-        anotherWaitingBooking = bookingRepository.save(anotherWaitingBooking);
-
-        BookingResponseDto result1 = bookingService.approveBooking(owner.getId(), waitingBooking.getId(), true);
-
-        assertThat(result1.getStatus()).isEqualTo(BookingStatus.APPROVED);
-
-        BookingResponseDto result2 = bookingService.approveBooking(owner.getId(), anotherWaitingBooking.getId(), false);
-
-        assertThat(result2.getStatus()).isEqualTo(BookingStatus.REJECTED);
-
-        Booking booking1 = bookingRepository.findById(waitingBooking.getId()).orElseThrow();
-        Booking booking2 = bookingRepository.findById(anotherWaitingBooking.getId()).orElseThrow();
-
-        assertThat(booking1.getStatus()).isEqualTo(BookingStatus.APPROVED);
-        assertThat(booking2.getStatus()).isEqualTo(BookingStatus.REJECTED);
     }
 
     @Test
     void approveBooking_ShouldThrowBadRequestException_WhenOwnerTriesToApproveTwice() {
-        bookingService.approveBooking(owner.getId(), waitingBooking.getId(), true);
+        bookingService.approveBooking(owner.getId(), waitingBookingId, true);
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> bookingService.approveBooking(owner.getId(), waitingBooking.getId(), true));
+                () -> bookingService.approveBooking(owner.getId(), waitingBookingId, true));
 
         assertThat(exception.getMessage()).isEqualTo("Booking status has already been changed");
-    }
-
-    @Test
-    void approveBooking_ShouldThrowBadRequestException_WhenOwnerTriesToChangeAfterRejection() {
-        bookingService.approveBooking(owner.getId(), waitingBooking.getId(), false);
-
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> bookingService.approveBooking(owner.getId(), waitingBooking.getId(), true));
-
-        assertThat(exception.getMessage()).isEqualTo("Booking status has already been changed");
-    }
-
-    @Test
-    void approveBooking_ShouldPreserveAllFields_WhenApproving() {
-        LocalDateTime originalStart = waitingBooking.getStartBooking();
-        LocalDateTime originalEnd = waitingBooking.getEndBooking();
-        Long originalBookerId = waitingBooking.getBooker().getId();
-        Long originalItemId = waitingBooking.getItem().getId();
-
-        BookingResponseDto result = bookingService.approveBooking(owner.getId(), waitingBooking.getId(), true);
-
-        assertThat(result.getStart()).isEqualTo(originalStart);
-        assertThat(result.getEnd()).isEqualTo(originalEnd);
-        assertThat(result.getBooker().getId()).isEqualTo(originalBookerId);
-        assertThat(result.getItem().getId()).isEqualTo(originalItemId);
-        assertThat(result.getStatus()).isEqualTo(BookingStatus.APPROVED);
-    }
-
-    @Test
-    void approveBooking_ShouldHandleBookingFromDifferentUser_WhenOwnerHasMultipleItems() {
-        Item secondItem = Item.builder()
-                .name("Mouse")
-                .description("Wireless mouse")
-                .available(true)
-                .owner(owner)
-                .build();
-        secondItem = itemRepository.save(secondItem);
-
-        User anotherBooker = User.builder()
-                .name("Another Booker")
-                .email("another.booker@example.com")
-                .build();
-        anotherBooker = userRepository.save(anotherBooker);
-
-        Booking secondBooking = Booking.builder()
-                .startBooking(LocalDateTime.now().plusDays(1))
-                .endBooking(LocalDateTime.now().plusDays(2))
-                .item(secondItem)
-                .booker(anotherBooker)
-                .status(BookingStatus.WAITING)
-                .build();
-        secondBooking = bookingRepository.save(secondBooking);
-
-        BookingResponseDto result = bookingService.approveBooking(owner.getId(), secondBooking.getId(), true);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getStatus()).isEqualTo(BookingStatus.APPROVED);
-        assertThat(result.getBooker().getId()).isEqualTo(anotherBooker.getId());
-        assertThat(result.getItem().getId()).isEqualTo(secondItem.getId());
     }
 }

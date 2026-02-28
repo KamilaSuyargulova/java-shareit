@@ -30,7 +30,6 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
-    private final BookingMapper bookingMapper;
 
     @Transactional(readOnly = true)
     public BookingResponseDto getBooking(Long userId, Long bookingId) {
@@ -46,7 +45,7 @@ public class BookingServiceImpl implements BookingService {
             throw new ConflictException("User with id=" + userId + " is not owner of booking with id=" + bookingId);
         }
 
-        return bookingMapper.mapToResponseDto(existingBooking);
+        return BookingMapper.mapToResponseDto(existingBooking);
     }
 
     @Transactional(readOnly = true)
@@ -61,22 +60,22 @@ public class BookingServiceImpl implements BookingService {
 
         return switch (state) {
             case CURRENT -> bookingRepository.findCurrentByBookerId(userId, now).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             case PAST -> bookingRepository.findPastByBookerId(userId, now).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             case FUTURE -> bookingRepository.findFutureByBookerId(userId, now).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             case WAITING -> bookingRepository.findByBookerIdAndStatus(userId, BookingStatus.WAITING).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             case REJECTED -> bookingRepository.findByBookerIdAndStatus(userId, BookingStatus.REJECTED).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             default -> bookingRepository.findAllByBookerId(userId).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
         };
     }
@@ -93,22 +92,22 @@ public class BookingServiceImpl implements BookingService {
 
         return switch (state) {
             case CURRENT -> bookingRepository.findCurrentByOwnerId(userId, now).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             case PAST -> bookingRepository.findPastByOwnerId(userId, now).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             case FUTURE -> bookingRepository.findFutureByOwnerId(userId, now).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             case WAITING -> bookingRepository.findByOwnerIdAndStatus(userId, BookingStatus.WAITING).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             case REJECTED -> bookingRepository.findByOwnerIdAndStatus(userId, BookingStatus.REJECTED).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
             default -> bookingRepository.findAllByOwnerId(userId).stream()
-                    .map(bookingMapper::mapToResponseDto)
+                    .map(BookingMapper::mapToResponseDto)
                     .toList();
         };
     }
@@ -116,7 +115,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponseDto createBooking(Long userId, BookingCreateDto bookingCreateDto) {
         Long itemId = bookingCreateDto.getItemId();
-        Booking bookingToCreate = bookingMapper.mapToBooking(bookingCreateDto);
+        Booking bookingToCreate = BookingMapper.mapToBooking(bookingCreateDto);
 
         User user = userRepository.findById(userId).orElseThrow(
                 () -> new NotFoundException("User with id=" + userId + " not found"));
@@ -139,7 +138,7 @@ public class BookingServiceImpl implements BookingService {
         bookingToCreate.setStatus(BookingStatus.WAITING);
 
         Booking createdBooking = bookingRepository.save(bookingToCreate);
-        return bookingMapper.mapToResponseDto(createdBooking);
+        return BookingMapper.mapToResponseDto(createdBooking);
     }
 
     @Transactional
@@ -160,6 +159,6 @@ public class BookingServiceImpl implements BookingService {
         existingBooking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
 
         Booking updatedBooking = bookingRepository.save(existingBooking);
-        return bookingMapper.mapToResponseDto(updatedBooking);
+        return BookingMapper.mapToResponseDto(updatedBooking);
     }
 }

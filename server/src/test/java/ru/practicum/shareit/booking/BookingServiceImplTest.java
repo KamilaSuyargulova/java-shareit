@@ -6,9 +6,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import ru.practicum.shareit.booking.dto.BookingCreateDto;
 import ru.practicum.shareit.booking.dto.BookingResponseDto;
-import ru.practicum.shareit.booking.mapper.BookingMapper;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingState;
 import ru.practicum.shareit.booking.model.BookingStatus;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class BookingServiceImplTest {
 
     @Mock
@@ -39,8 +41,6 @@ class BookingServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private ItemRepository itemRepository;
-    @Mock
-    private BookingMapper bookingMapper;
 
     @InjectMocks
     private BookingServiceImpl bookingService;
@@ -102,19 +102,21 @@ class BookingServiceImplTest {
     @Test
     void getBooking_ShouldReturnBooking_WhenUserIsOwner() {
         when(bookingRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(booking));
-        when(bookingMapper.mapToResponseDto(booking)).thenReturn(bookingResponseDto);
 
         BookingResponseDto result = bookingService.getBooking(1L, 1L);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
         assertEquals(BookingStatus.WAITING, result.getStatus());
+        assertEquals(booking.getStartBooking(), result.getStart());
+        assertEquals(booking.getEndBooking(), result.getEnd());
+        assertEquals(booker, result.getBooker());
+        assertEquals(item, result.getItem());
     }
 
     @Test
     void getBooking_ShouldReturnBooking_WhenUserIsBooker() {
         when(bookingRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(booking));
-        when(bookingMapper.mapToResponseDto(booking)).thenReturn(bookingResponseDto);
 
         BookingResponseDto result = bookingService.getBooking(2L, 1L);
 
@@ -140,7 +142,6 @@ class BookingServiceImplTest {
     void getBookerBookings_ShouldReturnBookings_WhenStateIsAll() {
         when(userRepository.existsById(2L)).thenReturn(true);
         when(bookingRepository.findAllByBookerId(2L)).thenReturn(List.of(booking));
-        when(bookingMapper.mapToResponseDto(booking)).thenReturn(bookingResponseDto);
 
         List<BookingResponseDto> result = bookingService.getBookerBookings(2L, BookingState.ALL);
 
@@ -157,12 +158,52 @@ class BookingServiceImplTest {
     }
 
     @Test
+    void getBookerBookings_ShouldReturnCurrentBookings_WhenStateIsCurrent() {
+        LocalDateTime now = LocalDateTime.now();
+        Booking currentBooking = Booking.builder()
+                .id(2L)
+                .startBooking(now.minusHours(1))
+                .endBooking(now.plusHours(1))
+                .item(item)
+                .booker(booker)
+                .status(BookingStatus.APPROVED)
+                .build();
+
+        when(userRepository.existsById(2L)).thenReturn(true);
+        when(bookingRepository.findCurrentByBookerId(eq(2L), any(LocalDateTime.class)))
+                .thenReturn(List.of(currentBooking));
+
+        List<BookingResponseDto> result = bookingService.getBookerBookings(2L, BookingState.CURRENT);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(2L, result.get(0).getId());
+    }
+
+    @Test
+    void getOwnerBookings_ShouldReturnBookings_WhenStateIsAll() {
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(bookingRepository.findAllByOwnerId(1L)).thenReturn(List.of(booking));
+
+        List<BookingResponseDto> result = bookingService.getOwnerBookings(1L, BookingState.ALL);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(1L, result.get(0).getId());
+    }
+
+    @Test
+    void getOwnerBookings_ShouldThrowNotFoundException_WhenUserNotFound() {
+        when(userRepository.existsById(99L)).thenReturn(false);
+
+        assertThrows(NotFoundException.class, () -> bookingService.getOwnerBookings(99L, BookingState.ALL));
+    }
+
+    @Test
     void createBooking_ShouldCreateBooking_WhenDataIsValid() {
         when(userRepository.findById(2L)).thenReturn(Optional.of(booker));
         when(itemRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(item));
-        when(bookingMapper.mapToBooking(bookingCreateDto)).thenReturn(booking);
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
-        when(bookingMapper.mapToResponseDto(booking)).thenReturn(bookingResponseDto);
 
         BookingResponseDto result = bookingService.createBooking(2L, bookingCreateDto);
 
@@ -179,23 +220,37 @@ class BookingServiceImplTest {
                 .end(LocalDateTime.now().plusDays(1))
                 .build();
 
-        Booking invalidBooking = Booking.builder()
-                .startBooking(invalidDto.getStart())
-                .endBooking(invalidDto.getEnd())
-                .build();
-
         when(userRepository.findById(2L)).thenReturn(Optional.of(booker));
         when(itemRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(item));
-        when(bookingMapper.mapToBooking(invalidDto)).thenReturn(invalidBooking);
 
         assertThrows(BadRequestException.class, () -> bookingService.createBooking(2L, invalidDto));
+    }
+
+    @Test
+    void createBooking_ShouldThrowNotFoundException_WhenUserNotFound() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> bookingService.createBooking(99L, bookingCreateDto));
+    }
+
+    @Test
+    void createBooking_ShouldThrowNotFoundException_WhenItemNotFound() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(booker));
+        when(itemRepository.findByIdWithDetails(99L)).thenReturn(Optional.empty());
+
+        BookingCreateDto dtoWithInvalidItem = BookingCreateDto.builder()
+                .itemId(99L)
+                .start(LocalDateTime.now().plusDays(1))
+                .end(LocalDateTime.now().plusDays(2))
+                .build();
+
+        assertThrows(NotFoundException.class, () -> bookingService.createBooking(2L, dtoWithInvalidItem));
     }
 
     @Test
     void createBooking_ShouldThrowNotFoundException_WhenOwnerTriesToBookOwnItem() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
         when(itemRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(item));
-        when(bookingMapper.mapToBooking(bookingCreateDto)).thenReturn(booking);
 
         assertThrows(NotFoundException.class, () -> bookingService.createBooking(1L, bookingCreateDto));
     }
@@ -206,7 +261,6 @@ class BookingServiceImplTest {
 
         when(userRepository.findById(2L)).thenReturn(Optional.of(booker));
         when(itemRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(item));
-        when(bookingMapper.mapToBooking(bookingCreateDto)).thenReturn(booking);
 
         assertThrows(BadRequestException.class, () -> bookingService.createBooking(2L, bookingCreateDto));
     }
@@ -215,7 +269,6 @@ class BookingServiceImplTest {
     void approveBooking_ShouldApproveBooking_WhenUserIsOwner() {
         when(bookingRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
-        when(bookingMapper.mapToResponseDto(booking)).thenReturn(bookingResponseDto);
 
         BookingResponseDto result = bookingService.approveBooking(1L, 1L, true);
 
@@ -227,12 +280,18 @@ class BookingServiceImplTest {
     void approveBooking_ShouldRejectBooking_WhenUserIsOwner() {
         when(bookingRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(booking));
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
-        when(bookingMapper.mapToResponseDto(booking)).thenReturn(bookingResponseDto);
 
         BookingResponseDto result = bookingService.approveBooking(1L, 1L, false);
 
         assertNotNull(result);
         assertEquals(BookingStatus.REJECTED, booking.getStatus());
+    }
+
+    @Test
+    void approveBooking_ShouldThrowNotFoundException_WhenBookingNotFound() {
+        when(bookingRepository.findByIdWithDetails(99L)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> bookingService.approveBooking(1L, 99L, true));
     }
 
     @Test

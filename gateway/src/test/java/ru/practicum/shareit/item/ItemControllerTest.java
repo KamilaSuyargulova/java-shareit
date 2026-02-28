@@ -13,8 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import ru.practicum.shareit.Item.dto.ItemCreateDto;
-import ru.practicum.shareit.Item.dto.ItemUpdateDto;
+import ru.practicum.shareit.item.dto.ItemCreateDto;
+import ru.practicum.shareit.item.dto.ItemUpdateDto;
 import ru.practicum.shareit.ShareItGateway;
 import ru.practicum.shareit.comment.dto.CommentCreateDto;
 
@@ -38,7 +38,7 @@ class ItemControllerTest {
     private final WebApplicationContext context;
 
     @MockBean
-    private ru.practicum.shareit.Item.ItemClient itemClient;
+    private ru.practicum.shareit.item.ItemClient itemClient;
 
     private static final String HEADER_USER_ID = "X-Sharer-User-Id";
 

@@ -5,7 +5,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import ru.practicum.shareit.Item.dto.ItemCreateDto;
+import ru.practicum.shareit.item.dto.ItemCreateDto;
 
 import static org.junit.jupiter.api.Assertions.*;
 

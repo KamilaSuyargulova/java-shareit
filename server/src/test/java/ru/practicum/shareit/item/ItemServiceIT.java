@@ -257,7 +257,7 @@ class ItemServiceIT {
         ItemResponseDto result = itemService.updateItem(owner.getId(), existingItem.getId(), updateDto);
 
         assertThat(result).isNotNull();
-        assertThat(result.getComments()).isNullOrEmpty(); // комментариев нет
+        assertThat(result.getComments()).isNullOrEmpty();
         assertThat(result.getName()).isEqualTo("Updated Laptop");
         assertThat(result.getDescription()).isEqualTo("Gaming laptop");
         assertThat(result.getAvailable()).isTrue();

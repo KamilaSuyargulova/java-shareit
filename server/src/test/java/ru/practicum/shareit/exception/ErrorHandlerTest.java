@@ -1,31 +1,12 @@
 package ru.practicum.shareit.exception;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import ru.practicum.shareit.exception.*;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class ErrorHandlerTest {
 
     private final ErrorHandler errorHandler = new ErrorHandler();
-
-    @Test
-    void handleBadRequest_ShouldReturnBadRequestWithMessage() {
-        String message = "Invalid request data";
-        BadRequestException exception = new BadRequestException(message);
-
-        ErrorResponse response = errorHandler.handleBadRequest(exception);
-
-        assertNotNull(response);
-        assertEquals(message, response.getError());
-    }
 
     @Test
     void handleNotFound_ShouldReturnNotFoundWithMessage() {
@@ -47,21 +28,6 @@ class ErrorHandlerTest {
 
         assertNotNull(response);
         assertEquals(message, response.getError());
-    }
-
-    @Test
-    void handleValidationException_ShouldReturnBadRequestWithValidationMessage() {
-        MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
-        BindingResult bindingResult = mock(BindingResult.class);
-        FieldError fieldError = new FieldError("object", "field", "must not be null");
-
-        when(exception.getBindingResult()).thenReturn(bindingResult);
-        when(bindingResult.getAllErrors()).thenReturn(List.of(fieldError));
-
-        ErrorResponse response = errorHandler.handleValidationException(exception);
-
-        assertNotNull(response);
-        assertEquals("Validation failed: must not be null", response.getError());
     }
 
     @Test

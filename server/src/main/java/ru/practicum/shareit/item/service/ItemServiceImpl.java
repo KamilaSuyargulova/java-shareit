@@ -42,7 +42,6 @@ public class ItemServiceImpl implements ItemService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final BookingRepository bookingRepository;
-    private final BookingMapper bookingMapper;
     private final CommentMapper commentMapper;
     private final ItemMapper itemMapper;
 
@@ -209,10 +208,10 @@ public class ItemServiceImpl implements ItemService {
 
         dtos.forEach(dto -> {
             if (lastBookingMap.containsKey(dto.getId())) {
-                dto.setLastBooking(bookingMapper.mapToShortDto(lastBookingMap.get(dto.getId())));
+                dto.setLastBooking(BookingMapper.mapToShortDto(lastBookingMap.get(dto.getId())));
             }
             if (nextBookingMap.containsKey(dto.getId())) {
-                dto.setNextBooking(bookingMapper.mapToShortDto(nextBookingMap.get(dto.getId())));
+                dto.setNextBooking(BookingMapper.mapToShortDto(nextBookingMap.get(dto.getId())));
             }
         });
     }

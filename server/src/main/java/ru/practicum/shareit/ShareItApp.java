@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EnableJpaRepositories(basePackages = "ru.practicum")
 public class ShareItApp {
 
-    public static void main(String[] args) { //ShareItApp
+    public static void main(String[] args) {
         SpringApplication.run(ShareItApp.class, args);
     }
 

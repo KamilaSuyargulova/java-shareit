@@ -1,4 +1,4 @@
-package ru.practicum.shareit.Item;
+package ru.practicum.shareit.item;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -6,9 +6,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.shareit.Item.dto.ItemCreateDto;
-import ru.practicum.shareit.Item.dto.ItemUpdateDto;
+import ru.practicum.shareit.item.dto.ItemCreateDto;
+import ru.practicum.shareit.item.dto.ItemUpdateDto;
 import ru.practicum.shareit.comment.dto.CommentCreateDto;
+import ru.practicum.shareit.item.ItemClient;
 
 import static ru.practicum.shareit.common.Constants.HEADER_USER_ID;
 
@@ -17,7 +18,7 @@ import static ru.practicum.shareit.common.Constants.HEADER_USER_ID;
 @RequiredArgsConstructor
 @Validated
 public class ItemController {
-    private final ru.practicum.shareit.Item.ItemClient itemClient;
+    private final ItemClient itemClient;
 
     @GetMapping("/{itemId}")
     public ResponseEntity<Object> getItem(@RequestHeader(HEADER_USER_ID) @Positive Long userId,
